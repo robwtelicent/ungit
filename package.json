@@ -16,7 +16,7 @@
     "format": "npm run lint -- --fix",
     "build": "node --trace-deprecation ./scripts/build.js",
     "watch": "nodemon -C --exec \"npm run build\" -e js,less -w public/source -w public/less -w components/ -i \"*.bundle.js\"",
-    "bumpdependencies": "ncu --upgrade --reject jquery --reject bootstrap",
+    "bumpdependencies": "ncu --upgrade --reject jquery --reject bootstrap --reject typescript",
     "electronpackage": "node ./scripts/electronpackage.js",
     "electronzip": "node ./scripts/electronzip.js"
   },
@@ -68,7 +68,7 @@
     "socket.io": "~4.8.3",
     "temp": "~0.9.4",
     "tsify": "~5.0.4",
-    "typescript": "~7.0.2",
+    "typescript": "~5.9.3",
     "winston": "~3.19.0",
     "yargs": "~18.0.0"
   },
