@@ -66,8 +66,17 @@ class BranchesViewModel extends ComponentRoot {
       this.updateRefs();
     }
   }
+  // Fetching from the remote is a network round trip, so only do it automatically
+  // once per `autoFetchMinInterval` rather than on every refresh.
+  isAutoFetchDue() {
+    if (!this.shouldAutoFetch) return false;
+    const now = Date.now();
+    if (now - (this.lastAutoFetch || 0) < ungit.config.autoFetchMinInterval) return false;
+    this.lastAutoFetch = now;
+    return true;
+  }
   async _updateRefs(forceRemoteFetch) {
-    forceRemoteFetch = forceRemoteFetch || this.shouldAutoFetch || '';
+    forceRemoteFetch = forceRemoteFetch || this.isAutoFetchDue() || '';
 
     const branchesProm = this.server.getPromise('/branches', { path: this.repoPath() });
     const refsProm = this.server.getPromise('/refs', {

@@ -36,10 +36,19 @@ class RemotesViewModel {
     this.fetch({ nodes: true, tags: true });
   }
 
+  // `ls-remote` is a network round trip, so throttle the automatic tag check.
+  isAutoFetchDue() {
+    if (!this.shouldAutoFetch) return false;
+    const now = Date.now();
+    if (now - (this.lastAutoFetch || 0) < ungit.config.autoFetchMinInterval) return false;
+    this.lastAutoFetch = now;
+    return true;
+  }
+
   async onProgramEvent(event) {
     if (event.event === 'request-app-content-refresh' || event.event === 'request-fetch-tags') {
       await this.fetch({ tags: true });
-    } else if (event.event === 'git-directory-changed' && this.shouldAutoFetch) {
+    } else if (event.event === 'git-directory-changed' && this.isAutoFetchDue()) {
       await this.fetch({ tags: true });
     } else if (event.event === 'update-remote') {
       await this.updateRemotes();
