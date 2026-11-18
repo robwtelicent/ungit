@@ -61,6 +61,14 @@ const defaultConfig = {
   // Automatically fetch from remote when entering a repository using ungit, periodically on activity detection, or on directory change
   autoFetch: true,
 
+  // Minimum time in ms between automatic remote fetches (git fetch / ls-remote) triggered by
+  // repository changes. Manual fetches are never throttled. Set to 0 to fetch on every change.
+  autoFetchMinInterval: 60000,
+
+  // Verify and show PGP signatures of commits in the graph. Verification runs gpg for every
+  // signed commit on each graph load, so turn this off if loading the graph is slow.
+  showCommitSignatures: true,
+
   // Used for development purposes.
   dev: false,
 
@@ -242,6 +250,15 @@ const argv = yargs
     'Automatically fetch from remote when entering a repository using ungit, periodically on activity detection, or on directory change'
   )
   .boolean('autoFetch')
+  .describe(
+    'autoFetchMinInterval',
+    'Minimum time in ms between automatic remote fetches triggered by repository changes. 0 fetches on every change'
+  )
+  .describe(
+    'showCommitSignatures',
+    'Verify and show PGP signatures of commits in the graph. Disable if loading the graph is slow, as it runs gpg per signed commit'
+  )
+  .boolean('showCommitSignatures')
   .describe('dev', 'Used for development purposes')
   .boolean('dev')
   .describe(

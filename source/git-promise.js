@@ -610,7 +610,8 @@ git.log = (path, limit, skip, maxActiveBranchSearchIteration) => {
       'log',
       '--cc',
       '--decorate=full',
-      '--show-signature',
+      // Signature verification spawns gpg per signed commit, which can dominate load time
+      config.showCommitSignatures ? '--show-signature' : '',
       '--date=default',
       '--pretty=fuller',
       '-z',
