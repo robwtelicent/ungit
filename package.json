@@ -16,7 +16,7 @@
     "format": "npm run lint -- --fix",
     "build": "node --trace-deprecation ./scripts/build.js",
     "watch": "nodemon -C --exec \"npm run build\" -e js,less -w public/source -w public/less -w components/ -i \"*.bundle.js\"",
-    "bumpdependencies": "ncu --upgrade --reject jquery --reject bootstrap --reject typescript",
+    "bumpdependencies": "ncu --upgrade --reject jquery --reject bootstrap --reject typescript --reject chokidar",
     "electronpackage": "node ./scripts/electronpackage.js",
     "electronzip": "node ./scripts/electronzip.js"
   },
@@ -33,7 +33,7 @@
     "blueimp-md5": "~2.19.0",
     "body-parser": "~2.3.0",
     "bootstrap": "~3.4.1",
-    "chokidar": "~5.0.0",
+    "chokidar": "~3.6.0",
     "cookie-parser": "~1.4.7",
     "crossroads": "~0.12.2",
     "diff2html": "~3.4.56",

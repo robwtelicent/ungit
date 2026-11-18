@@ -64,7 +64,9 @@ exports.registerApi = (env) => {
         logger.debug(`[${this.watcherId}] path does not exist`, item);
         return;
       }
-      const watcher = chokidar.watch(item, { ignored: filter });
+      // ignoreInitial: without it chokidar fires an 'add'/'addDir' event for every existing file
+      // when the watcher starts, and each one triggers a full refresh of the repository view.
+      const watcher = chokidar.watch(item, { ignored: filter, ignoreInitial: true });
       const changed = (changedPath) => {
         logger.silly(`[${this.watcherId}] ${name}`, changedPath);
         this.emit(name, changedPath);
