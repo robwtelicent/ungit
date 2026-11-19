@@ -245,6 +245,25 @@ exports.registerApi = (env) => {
     ];
   };
 
+  // Two overlapping `git fetch` runs on the same repo race when updating refs/remotes/*, and the
+  // slower one fails with "cannot lock ref ... is at X but expected Y". Several things can start
+  // a fetch at once (/fetch, /refs?remoteFetch, multiple tabs), so run at most one at a time per
+  // repo and remote. A fetch of everything joins one already in flight, since that would only
+  // repeat the same work; a fetch of a specific ref waits for it to finish and then runs.
+  const inFlightFetches = new Map();
+  const serializedFetch = (repoPath, remote, ref, startFetch) => {
+    const key = `${path.normalize(repoPath)}\0${remote}`;
+    const running = inFlightFetches.get(key);
+    if (running && !ref) return running;
+
+    const task = running ? running.catch(() => {}).then(startFetch) : startFetch();
+    const tracked = task.finally(() => {
+      if (inFlightFetches.get(key) === tracked) inFlightFetches.delete(key);
+    });
+    inFlightFetches.set(key, tracked);
+    return tracked;
+  };
+
   const getNumber = (value, nullValue) => {
     const finalValue = parseInt(value ? value : nullValue);
     if (finalValue || finalValue === 0) {
@@ -304,17 +323,19 @@ exports.registerApi = (env) => {
       // Allow a little longer timeout on fetch (10min)
       if (res.setTimeout) res.setTimeout(tenMinTimeoutMs);
 
-      const task = gitPromise({
-        commands: credentialsOption(req.query.socketId, req.query.remote).concat([
-          'fetch',
-          config.autoPruneOnFetch ? '--prune' : '',
-          '--',
-          req.query.remote,
-          req.query.ref ? req.query.ref : '',
-        ]),
-        repoPath: req.query.path,
-        timeout: tenMinTimeoutMs,
-      });
+      const task = serializedFetch(req.query.path, req.query.remote, req.query.ref, () =>
+        gitPromise({
+          commands: credentialsOption(req.query.socketId, req.query.remote).concat([
+            'fetch',
+            config.autoPruneOnFetch ? '--prune' : '',
+            '--',
+            req.query.remote,
+            req.query.ref ? req.query.ref : '',
+          ]),
+          repoPath: req.query.path,
+          timeout: tenMinTimeoutMs,
+        })
+      );
 
       jsonResultOrFailProm(res, task).finally(emitGitDirectoryChanged.bind(null, req.query.path));
     }
@@ -492,11 +513,13 @@ exports.registerApi = (env) => {
           return remotes.reduce((promise, remote) => {
             if (!remote || remote === '') return promise;
             return promise.then(() => {
-              return gitPromise({
-                commands: credentialsOption(req.query.socketId, remote).concat(['fetch', remote]),
-                repoPath: req.query.path,
-                timeout: tenMinTimeoutMs,
-              }).catch((e) => logger.warn('err during remote fetch for /refs', e)); // ignore fetch err as it is most likely credential
+              return serializedFetch(req.query.path, remote, undefined, () =>
+                gitPromise({
+                  commands: credentialsOption(req.query.socketId, remote).concat(['fetch', remote]),
+                  repoPath: req.query.path,
+                  timeout: tenMinTimeoutMs,
+                })
+              ).catch((e) => logger.warn('err during remote fetch for /refs', e)); // ignore fetch err as it is most likely credential
             });
           }, Promise.resolve());
         })
