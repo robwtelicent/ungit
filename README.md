@@ -36,6 +36,36 @@ NOTE: If your system requires root access to install global npm packages, make s
 
 Prebuilt [electron](https://electronjs.org/) packages are available [here](https://github.com/FredrikNoren/ungit/releases) (git is still required).
 
+Installing this fork
+--------------------
+This repository is a fork of [FredrikNoren/ungit](https://github.com/FredrikNoren/ungit) with performance fixes, so `npm install -g ungit` installs the upstream version, not this one. To use the fork, install it from a checkout. It requires the same node.js, npm and git versions as above.
+
+	git clone git@github.com:robwtelicent/ungit.git
+	cd ungit
+	npm install
+	npm run build
+	npm link
+
+This makes the global `ungit` command run from your checkout. You must run `npm run build` before using it: the web UI is compiled into `public/js`, `public/css` and `components/*/*.bundle.js`, which are not committed, and without them the browser shows a blank page and requests for `styles.css` fail with 404.
+
+To update, run `git pull`, then `npm install` and `npm run build` again, and restart ungit. Edits to server code (`source/`) only need a restart. Edits under `components/` or `public/` also need a rebuild (`npm run watch` rebuilds on change).
+
+Notes:
+
+ * `npm link` is tied to the node version that ran it. If you switch node versions with nvm, run `npm link` again from the checkout.
+ * Running `npm install -g ungit` afterwards replaces the link with the upstream package. To undo the link, run `npm unlink -g ungit`.
+ * `npm install` may report that install scripts for `fsevents` and `puppeteer` were blocked. This is safe to ignore: `fsevents` ships a prebuilt binary, and `puppeteer` is only used by the click tests.
+
+### What is different in this fork
+
+ * **Faster on macOS.** Upstream uses chokidar 5, which has no `fsevents` backend on macOS and opens one file watch per file and folder. In a repository with a few thousand files, every `git` process ungit started then took roughly 20 times longer (about 450ms instead of 20ms), which made checkouts and refreshes very slow. This fork pins chokidar to 3.6, which watches the repository with a single `fsevents` stream. Do not upgrade chokidar beyond 3.x without re-measuring.
+ * **No refresh storm when a repository is opened.** File watchers are started with `ignoreInitial`, so opening a repository no longer fires a change event for every existing file.
+ * **Index lock fix.** `--no-optional-locks` is now used for git 2.15.0 and later. It was previously only used for exactly 2.15.0, so read-only commands such as `git status` competed for `.git/index.lock` and were retried with a delay.
+ * **One fetch at a time.** Overlapping `git fetch` runs on the same repository and remote are shared or serialized, which stops the `cannot lock ref ... is at X but expected Y` error.
+ * **Fewer automatic fetches.** Automatic fetches triggered by repository changes are limited to one per `autoFetchMinInterval` milliseconds (default `60000`, `0` fetches on every change). Fetching manually is never limited.
+ * **Optional commit signatures.** `showCommitSignatures` (default `true`) controls whether `git log --show-signature` is used to display PGP signatures on graph nodes. Verifying signatures runs `gpg` for every signed commit each time the graph loads, so set it to `false` if the graph is slow to load: `ungit --no-showCommitSignatures`.
+ * **Build and dependency fixes.** TypeScript is pinned to 5.x because `tsify` does not work with TypeScript 7, and the dependency bump workflow does not upgrade `typescript` or `chokidar`.
+
 Using
 -----
 Anywhere you want to start, just type:
