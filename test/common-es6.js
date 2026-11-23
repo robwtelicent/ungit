@@ -2,6 +2,14 @@ const expect = require('expect.js');
 const path = require('path');
 const restGit = require('../source/git-api');
 
+// Tests use file based submodules, which git >= 2.38.1 blocks by default (see #1539).
+// Allow them for git processes spawned by the tests without touching the user's git config.
+if (!process.env.GIT_CONFIG_COUNT) {
+  process.env.GIT_CONFIG_COUNT = '1';
+  process.env.GIT_CONFIG_KEY_0 = 'protocol.file.allow';
+  process.env.GIT_CONFIG_VALUE_0 = 'always';
+}
+
 exports.makeRequest = (method, req, path, payload) => {
   let r;
   if (method === 'GET' || method === 'PNG') {
